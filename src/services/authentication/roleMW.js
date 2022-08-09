@@ -1,6 +1,6 @@
 import createHttpError  from "http-errors"
 
-export const adminMW = async(req, res, next) => {
+export const roleMW = async(req, res, next) => {
     if(req.user.role === "manager") {
         next()
     } else {
