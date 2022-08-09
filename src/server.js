@@ -10,9 +10,10 @@ const PORT = process.env.PORT || 3000
 
 server.use(express.json())
 
+
+//************************* Cors ***************************//
 const whiteListOrigin = [process.env.PROD_URL, process.env.DEV_URL]
 
-// CORS
 server.use(cors({
     origin: function(origin, next){
         if(!origin || whiteListOrigin.indexOf(origin)!== -1){
@@ -23,7 +24,7 @@ server.use(cors({
     }
 }))
 
-
+//************************* Routes *****************************//
 server.use("/users", usersRouter)
 
 // Connect to MongoDB
@@ -32,12 +33,14 @@ mongoose.connection.on("connected" , () => {
     console.log("Successfully connected to mongoDB")
 })
 
-// listen to server
+//********************** listen to server ***********************//
+
 server.listen(PORT, () => {
     console.table(listEndpoints(server))
     console.log("The server is running in port", PORT)
   })
 
-//  check server connection
+//***************** check server connection *********************//
+
 server.on("error", (error) => {
     console.log("server has stopped due to error")})
