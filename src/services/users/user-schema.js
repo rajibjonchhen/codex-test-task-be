@@ -8,10 +8,12 @@ const UserSchema = new Schema({
     name: { type: String, required: true},
     surname: { type: String, required: true},
     email: { type: String, required: true, unique:[true, "email must be unique"] },
-    avatar: { type: String, required: true, default: "https://ui-avatars.com/api/?name=John+Doe" },
+    avatar: { type: String, default: "https://ui-avatars.com/api/?name=John+Doe" },
     role: { type: String, required: true,  enum:["manager","developer"]},
     password: { type: String },
-    refreshToken :{ type : String}
+    task:[{type:Schema.Types.ObjectId, ref:'Tasks'}],
+    refreshToken :{ type : String},
+    userVerification:{ type: String, enum:['waiting', 'verified'], default: 'waiting'},
 },{
     timestamps: true,
 })
