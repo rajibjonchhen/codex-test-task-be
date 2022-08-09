@@ -4,7 +4,7 @@ import bcrypt from "bcrypt"
 
 const { Schema, model } = mongoose;
 
-const userSchema = new Schema({
+const UserSchema = new Schema({
     name: { type: String, required: true, unique:[true, "username must be unique" ]},
     surname: { type: String, required: true, unique:[true, "username must be unique" ]},
     email: { type: String, required: true, unique:[true, "email must be unique"] },
@@ -17,7 +17,7 @@ const userSchema = new Schema({
 })
 
 
-userSchema.pre("save", async function(next){
+UserSchema.pre("save", async function(next){
     const newUser = this
     const plainPw = newUser.password
     if(newUser.isModified("password")){
@@ -44,5 +44,5 @@ UserSchema.statics.checkCredentials = async function(email, plainPW){
         return null
 }
 
-export default model("Users", userSchema)
+export default model("Users", UserSchema)
 
