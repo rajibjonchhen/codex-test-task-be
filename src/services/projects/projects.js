@@ -4,11 +4,37 @@ import multer from "multer";
 import { JWTAuthMW } from "../authentication/JWTAuthMW.js";
 import ProjectModel from "./project-schema.js";
 import UserModel from "../users/user-schema.js";
-import { roleMW } from "../authentication/roleMW.js";
+import { managerMW } from "../authentication/managerMW.js";
 
 
 const projectsRouter = express.Router();
 
+
+
+
+/*****************************  get all projects *************************/
+projectsRouter.get("/projects", JWTAuthMW, async (req, res, next) => {
+    try {
+      const search = req.query.s;
+      const projects = await ProjectModel.find();
+  
+      if (req.query.s) {
+        const projects = await ProjectModel.find({
+          // $or: [{ title: `${search}` }],
+          $or: [{"title": `/^${search}/i`},{"name": `/^${search}/i`}, {"description": `/^${search}/i`}, {"summary": `/^${search}/i`}]
+        });
+  
+        res.send({ projects });
+      } else {
+        res.send({ projects });
+      }
+    } catch (error) {
+      console.log(error);
+      next(createError(error));
+    }
+  });
+
+  
 /***************************  manager only routes ************************/
 
 /***************************  edit project by id route ************************/
@@ -37,7 +63,7 @@ projectsRouter.put(
 projectsRouter.delete(
   "/:projectId",
   JWTAuthMW,
-  roleMW,
+  managerMW,
   async (req, res, next) => {
     try {
       if (req.user.role === "admin") {
@@ -77,28 +103,6 @@ projectsRouter.get("/me", JWTAuthMW, async (req, res, next) => {
   } catch (error) {
     console.log(error);
 
-    next(createError(error));
-  }
-});
-
-/*****************************  get all projects *************************/
-projectsRouter.get("/projects", JWTAuthMW, async (req, res, next) => {
-  try {
-    const search = req.query.s;
-    const projects = await ProjectModel.find();
-
-    if (req.query.s) {
-      const projects = await ProjectModel.find({
-        // $or: [{ title: `${search}` }],
-        $or: [{"title": `/^${search}/i`},{"name": `/^${search}/i`}, {"description": `/^${search}/i`}, {"summary": `/^${search}/i`}]
-      });
-
-      res.send({ projects });
-    } else {
-      res.send({ projects });
-    }
-  } catch (error) {
-    console.log(error);
     next(createError(error));
   }
 });
