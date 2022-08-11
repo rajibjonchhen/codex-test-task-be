@@ -11,9 +11,10 @@ const UserSchema = new Schema({
     avatar: { type: String, default: "https://ui-avatars.com/api/?name=John+Doe" },
     role: { type: String, required: true,  enum:["manager","developer"]},
     password: { type: String },
-    task:[{type:Schema.Types.ObjectId, ref:'Tasks'}],
+    tasks:[{type:Schema.Types.ObjectId, ref:'Tasks'}],
     refreshToken :{ type : String},
     userVerification:{ type: String, enum:['waiting', 'verified'], default: 'waiting'},
+    projects:[{type:Schema.Types.ObjectId, ref:'Projects'}],
 },{
     timestamps: true,
 })
