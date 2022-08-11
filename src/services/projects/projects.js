@@ -3,61 +3,136 @@ import createError from "http-errors";
 import multer from "multer";
 import { JWTAuthMW } from "../authentication/JWTAuthMW.js";
 import ProjectModel from "./project-schema.js";
-import UserModel from "../users/user-schema.js";
+import TaskModel from "../tasks/task-schema.js";
 import { managerMW } from "../authentication/managerMW.js";
 
 
 const projectsRouter = express.Router();
 
-
+/***************************  register new project ***********************/
+projectsRouter.post("/", JWTAuthMW, async (req, res, next) => {
+    try {
+        const newproject = new ProjectModel({
+        ...req.body,
+        developer: [req.user._id]
+        });
+        const project = await newproject.save();
+        if (project) {
+        res.send({ project });
+        } else {
+        console.log("bad request missing field could not create project");
+        next(
+            createError(401, {
+            message: "bad request missing field could not create project",
+            })
+        );
+        }
+    } catch (error) {
+        console.log(error);
+        next(createError(error));
+    }
+    });
 
 
 /*****************************  get all projects *************************/
-projectsRouter.get("/projects", JWTAuthMW, async (req, res, next) => {
+projectsRouter.get("/", JWTAuthMW, async (req, res, next) => {
     try {
-      const search = req.query.s;
-      const projects = await ProjectModel.find();
-  
-      if (req.query.s) {
+        const search = req.query.s;
+        const projects = await ProjectModel.find();
+
+        if (req.query.s) {
         const projects = await ProjectModel.find({
-          // $or: [{ title: `${search}` }],
-          $or: [{"title": `/^${search}/i`},{"name": `/^${search}/i`}, {"description": `/^${search}/i`}, {"summary": `/^${search}/i`}]
+            // $or: [{ title: `${search}` }],
+            $or: [{"title": `/^${search}/i`},{"name": `/^${search}/i`}, {"description": `/^${search}/i`}, {"summary": `/^${search}/i`}]
         });
+
+        res.send({ projects });
+        } else {
+        res.send({ projects });
+        }
+    } catch (error) {
+        console.log(error);
+        next(createError(error));
+    }
+    });
+
+
+/***************************  edit project by id route ************************/
+projectsRouter.put("/:projectId",
+JWTAuthMW,
+async (req, res, next) => {
+    try {
+        
+        const updatedProject = await ProjectModel.findByIdAndUpdate(
+            req.params.projectId,
+            req.body,
+            { new: true }
+        );
+        res.send({ project: updatedProject });
+        
+    } catch (error) {
+        console.log(error);
+        next(createError(error));
+    }
+}
+);
+
+/***************************  get project by id  ************************/
+projectsRouter.get("/:projectId", JWTAuthMW, async (req, res, next) => {
+    try {
+      const project = await ProjectModel.findById(req.params.projectId).populate({
+        path: "developers",
+        select: "name surname email",
+      });
+        res.send({ project });
+    } catch (error) {
+      console.log(error);
+      next(createError(error));
+    }
+  });
   
-        res.send({ projects });
-      } else {
-        res.send({ projects });
-      }
+
+  /***************************  get tasks of a project ************************/
+projectsRouter.get("/:projectId/tasks", async (req, res, next) => {
+    try {
+      const project = await ProjectModel.findById(req.params.projectId).populate(
+        {path: "tasks", select: "task description status"}
+      )
+        res.send({ tasks: project.tasks });
     } catch (error) {
       console.log(error);
       next(createError(error));
     }
   });
 
-  
-/***************************  manager only routes ************************/
 
-/***************************  edit project by id route ************************/
-projectsRouter.put(
-  "/:projectId",
-  JWTAuthMW,
-  async (req, res, next) => {
+
+/****************************  add tasks to project *************************/
+projectsRouter.post("/:projectId/tasks", JWTAuthMW, async (req, res, next) => {
     try {
-      if (req.user.role === "admin") {
-        const updatedProject = await ProjectModel.findByIdAndUpdate(
-          req.params.projectId,
-          req.body,
-          { new: true }
-        );
-        res.send({ project: updatedProject });
-      }
+      const projectId = req.params.projectId
+      const newTask = new TaskModel({
+        ...req.body,
+        project: projectId,
+      })
+      const { _id } = await newTask.save()
+      const updatedProject = await ProjectModel.findByIdAndUpdate(
+        projectId,
+        { $push: { tasks: _id } },
+        { new: true }
+      ).populate({ path: "tasks", select: "" })
+      res.status(201).send({ updatedProject: updatedProject, newTaskId: _id })
     } catch (error) {
-      console.log(error);
-
-      next(createError(error));
+      console.log(error)
+      next(createError(error))
     }
-  }
-);
+  })
+  
+
+
+
+
+
 
 /***************************  delete project byid route ************************/
 projectsRouter.delete(
@@ -106,35 +181,6 @@ projectsRouter.get("/me", JWTAuthMW, async (req, res, next) => {
     next(createError(error));
   }
 });
-
-/***************************  get project byid route ************************/
-projectsRouter.get("/:projectId", async (req, res, next) => {
-  try {
-    const project = await ProjectModel.findById(req.params.projectId).populate({
-      path: "creator",
-      select: "name surname email avatar bio interest ",
-    });
-
-    if (req?.user?._id) {
-      const isLiked = project.Likes.find(
-        (like) => like.toString() === req.user._id
-      );
-      if (isLiked) {
-        project.isLiked = true;
-        res.send({ project });
-      } else {
-        project.isLiked = false;
-        res.send({ project });
-      }
-    } else {
-      res.send({ project });
-    }
-  } catch (error) {
-    console.log(error);
-    next(createError(error));
-  }
-});
-
 /***************************  register new project ***********************/
 projectsRouter.post("/", JWTAuthMW, async (req, res, next) => {
   try {
@@ -181,119 +227,6 @@ projectsRouter.get("/", async (req, res, next) => {
   }
 });
 
-/****************************  edit my project *************************/
-projectsRouter.put("/me/:projectId", JWTAuthMW, async (req, res, next) => {
-  try {
-    const project = await ProjectModel.findById(req.params.projectId);
-    if (project) {
-      if (project.creator.toString() === req.user._id) {
-        const updatedProject = await ProjectModel.findByIdAndUpdate(
-          req.params.projectId,
-          req.body,
-          {
-            new: true,
-          }
-        ).populate({
-          path: "creator",
-          select: "name surname email avatar bio interest ",
-        });
-        res.send({ updatedProject });
-      } else {
-        console.log(" not authorised to update the project");
 
-        next(
-          createError(401, {
-            message: " not authorised to update the project",
-          })
-        );
-      }
-    } else {
-      next(createError(404, { message: "could not find the project" }));
-    }
-  } catch (error) {
-    console.log(error);
-    next(createError(error));
-  }
-});
-
-/***************************  delete my project ************************/
-projectsRouter.delete("/me/:projectId", JWTAuthMW, async (req, res, next) => {
-    try {
-      const project = await ProjectModel.findById(req.params.projectId);
-      if (project) {
-        if (project.creator.toString() === req.user._id) {
-          const updatedProject = await ProjectModel.findByIdAndDelete(
-            req.params.projectId
-          );
-          res.send();
-        } else {
-          console.log("could not find the project");
-
-          next(
-            createError(401, {
-              message: " not authorised to delete the project",
-            })
-          );
-        }
-      } else {
-        console.log("could not find the project");
-
-        next(createError(404, { message: "could not find the project" }));
-      }
-    } catch (error) {
-      console.log(error);
-      next(createError(error));
-    }
-  })
-
-
-  /*****************************  like project *************************/
-  projectsRouter.put("/:projectId/likes", JWTAuthMW, async (req, res, next) => {
-    try {
-      const reqProject = await ProjectModel.findById(req.params.projectId);
-      if (reqProject) {
-        const isLiked = reqProject.Likes.find(
-          (like) => like.toString() === req.user._id
-        );
-        const counts = reqProject.Likes.length;
-
-        if (!isLiked) {
-          const updatedProject = await ProjectModel.findByIdAndUpdate(
-            req.params.projectId,
-            { $push: { Likes: req.user._id }, LikesCounts: counts + 1 },
-            { new: true }
-          );
-
-          const user = await UserModel.findByIdAndUpdate(req.user._id, {
-            $push: { projectsLiked: req.params.projectId },
-          });
-
-          updatedProject.isLiked = true;
-          res.send({ project: updatedProject, user: user });
-        } else {
-          const updatedProject = await ProjectModel.findByIdAndUpdate(
-            req.params.projectId,
-            { $pull: { Likes: req.user._id }, LikesCounts: counts - 1 },
-            { new: true }
-          );
-          const user = await UserModel.findByIdAndUpdate(req.user._id, {
-            $pull: { projectsLiked: req.params.projectId },
-          });
-          updatedProject.isLiked = false;
-          res.send({ project: updatedProject, user: user });
-        }
-      } else {
-        console.log("bad request could not find the required project");
-        next(
-          createError(404, {
-            message: "bad request could not find the required project",
-          })
-        );
-      }
-    } catch (error) {
-      console.log(error);
-      next(createError(error));
-    }
-  });
 
 export default projectsRouter;

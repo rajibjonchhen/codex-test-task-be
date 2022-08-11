@@ -38,6 +38,7 @@ UserSchema.methods.toJSON = function() {
 
 UserSchema.statics.checkCredentials = async function(email, plainPW){
     const user = await this.findOne({email})
+    console.log("checkCredentials", user)
     if(user){
         const isMatch = bcrypt.compare(plainPW, user.password)
         return isMatch? user: null

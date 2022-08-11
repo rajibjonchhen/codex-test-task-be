@@ -5,7 +5,9 @@ const { Schema, model } = mongoose;
 
 const ProjectSchema = new Schema({
     title: { type: String, required: true},
-    developer:[{type:Schema.Types.ObjectId, ref:'Users'}],
+    description:{type: String},
+    developers:[{type:Schema.Types.ObjectId, ref:'Users'}],
+    tasks:[{type:Schema.Types.ObjectId, ref:'Tasks'}],
 },{
     timestamps: true,
 })

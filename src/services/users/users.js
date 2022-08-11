@@ -9,6 +9,7 @@ const usersRouter = express.Router()
 //**************** post user *********************/
 usersRouter.post("/register", async(req, res, next) => {
     try {
+        console.log("new user", req.body);
         const newUser = new UserModel(req.body);
         const user = await newUser.save();
         // await sendConfirmationEmail({toUser: newUser.data, hash:newUser.data._id})
@@ -32,26 +33,37 @@ usersRouter.post("/register", async(req, res, next) => {
 })
 
 //**************** sign in users ******************/
-usersRouter.post("/signin", (req, res, next) => {
+usersRouter.post("/signin", async(req, res, next) => {
     try {
-        res.send({message:"You have been signed in successfully"})
+    const { email, password } = req.body;
+    const reqUser = await UserModel.checkCredentials(email, password);
+    console.log("signin", req.body);
+    if (reqUser) {
+      const user = await UserModel.findById(reqUser._id);
+      const token = await authenticateUser(user);
+      res.send({ user, token });
+    } else {
+      next(createError(401, { message: "User not found invalid email or password" }));
+    }
     } catch (error) {
-        
+        console.log(error)
+        next(createError(error));
     }
 
 })
 
 //**************** get all users ******************/
-usersRouter.get("/", (req, res, next) => {
+usersRouter.get("/", async(req, res, next) => {
     try {
-        res.send({message:"get all users"})
+        const users = await UserModel.find()
+        res.send({users})
     } catch (error) {
         
     }
 })
 
 //**************** get user by id *******************/
-usersRouter.get("/:userId", (req, res, next) => {
+usersRouter.get("/:userId", async(req, res, next) => {
     try {
         res.send({message:"get user by id"})
     } catch (error) {
