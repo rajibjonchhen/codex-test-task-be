@@ -51,16 +51,16 @@ commentsRouter.put("/:commentId", async (req, res, next) => {
 //**************** delete a comment *********************/
 commentsRouter.delete("/:commentId", async (req, res, next) => {
   try {
-    const reqComment = CommentModel.findById(commentId);
+    const commentId = req.params.commentId;
+    await CommentModel.findByIdAndDelete(commentId);
+    const reqComment = await CommentModel.findById(commentId);
     if (reqComment) {
       const updatedTask = await TaskModel.findByIdAndUpdate(
         reqComment.task,
-        { $pull: { comments: reqComment._id } },
+        { $pull: { comments: commentId} },
         { new: true }
       );
-      const commentId = req.params.commentId;
-      CommentModel.findByIdAndDelete(commentId);
-      res.send({ message: "comment deleted" });
+      res.send({ message: "comment deleted .." });
     } else {
       console.log("could not find comment");
       res.send({ error: "could not find comment" });
