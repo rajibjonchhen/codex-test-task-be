@@ -11,11 +11,12 @@ export const sendConfirmationEmail = function ({toUser, hash}) {
         })
         const message = {
             from: process.env.GOOGLE_USER,
+            // to: toUser.email,
             to: process.env.GOOGLE_USER,
             subject: 'Codex Software - Confirm your account',
             html: `<p>Hello ${toUser.name},</p>
                    <p>Please confirm your account by clicking the link below:</p>     
-                   <a href="${process.env.SERVER_URL}/confirm/${hash}">Confirm</a>
+                   <a href="${process.env.SERVER_URL}/confirm/${hash}"><button style={{backgroundColor:"gold"}}>Confirm</button></a>
                    <p>Thank you!</p>
                    <p>Codex Software</p>  
                    `

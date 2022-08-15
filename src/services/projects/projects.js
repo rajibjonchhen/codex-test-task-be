@@ -151,7 +151,7 @@ projectsRouter.get("/:projectId/tasks", async (req, res, next) => {
   try {
     const projects = await ProjectModel.findById(req.params.projectId).populate(
       { path: "tasks", select: " " }
-    );
+    ).populate({ path: "developers", select: "" });
     const tasks = projects.tasks;
     res.send({ tasks });
   } catch (error) {

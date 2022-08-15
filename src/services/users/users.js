@@ -11,27 +11,49 @@ const usersRouter = express.Router()
 //**************** post user *********************/
 usersRouter.post("/register", async(req, res, next) => {
     try {
-        const newUser = new UserModel(req.body);
-        const user = await newUser.save();
-        // await sendConfirmationEmail({toUser: newUser.data, hash:newUser.data._id})
-        // res.send({message:"You have been registered successfully. Please check your email to confirm your account"})
-        if (user) {
-          const token = await authenticateUser(user);
-          res.send({user, token});
-        } else {
-        console.log(error)
-    
-          next(
-            createError(401, {
-              message: "bad request missing field could not create user",
-            })
-          );
+        const reqUser = await UserModel.find({email:req.body.email})
+        if(reqUser.length > 0){
+            next(createError(400, "user already exists"))
+        }else{
+            const newUser = new UserModel(req.body)
+            const user = await newUser.save()
+            if(user){
+                sendConfirmationEmail({toUser:newUser, hash:newUser._id})
+                res.send({message:"You have been registered successfully. Please check your email to confirm your account"})
+            }else{
+                next(createError(400, "bad request missing field could not create user"))
+            }
         }
       } catch (error) {
         console.log(error)
         next(createError(error));
       }
 })
+
+//**************** post user *********************/
+// usersRouter.post("/register", async(req, res, next) => {
+//     try {
+//         const newUser = new UserModel(req.body);
+//         const user = await newUser.save();
+//         await sendConfirmationEmail({toUser: newUser.data, hash:newUser.data._id})
+//         res.send({message:"You have been registered successfully. Please check your email to confirm your account"})
+//         if (user) {
+//           const token = await authenticateUser(user);
+//           res.send({user, token});
+//         } else {
+//         console.log(error)
+    
+//           next(
+//             createError(401, {
+//               message: "bad request missing field could not create user",
+//             })
+//           );
+//         }
+//       } catch (error) {
+//         console.log(error)
+//         next(createError(error));
+//       }
+// })
 
 //**************** sign in users ******************/
 usersRouter.post("/signin", async(req, res, next) => {
@@ -66,8 +88,21 @@ usersRouter.get("/", async(req, res, next) => {
 usersRouter.put("/:userId",JWTAuthMW,  async(req, res, next) => {
     try {
         const userId = req.params.userId;
-        const users = await UserModel.findByIdAndUpdate(userId, req.body, {new:true})
-        res.send({users})
+        const user = await UserModel.findByIdAndUpdate(userId, req.body, {new:true})
+        res.send({user})
+    } catch (error) {
+        console.log(error)
+        next(createError(error));
+    }
+})
+
+//**************** edit a users ******************/
+usersRouter.put("/confirm/:userId",JWTAuthMW,  async(req, res, next) => {
+    try {
+        const userId = req.params.userId;
+        const user = await UserModel.findByIdAndUpdate(userId,{userVerification:"verified"}, {new:true})
+        console.log("verified", user)
+        res.send({user})
     } catch (error) {
         console.log(error)
         next(createError(error));
