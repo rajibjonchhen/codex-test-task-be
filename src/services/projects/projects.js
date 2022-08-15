@@ -12,8 +12,7 @@ const projectsRouter = express.Router();
 projectsRouter.post("/", JWTAuthMW, async (req, res, next) => {
   try {
     const newproject = new ProjectModel({
-      ...req.body,
-      developer: [req.user._id],
+      ...req.body
     });
     const project = await newproject.save();
     if (project) {
@@ -36,7 +35,7 @@ projectsRouter.post("/", JWTAuthMW, async (req, res, next) => {
 projectsRouter.get("/", JWTAuthMW, async (req, res, next) => {
   try {
     const search = req.query.s;
-    const projects = await ProjectModel.find();
+    const projects = await ProjectModel.find().populate({path:'developers', select:''});
 
     if (req.query.s) {
       const projects = await ProjectModel.find({
@@ -58,12 +57,11 @@ projectsRouter.get("/", JWTAuthMW, async (req, res, next) => {
 });
 
 /*****************************  get my projects *************************/
-projectsRouter.get("/my", JWTAuthMW, async (req, res, next) => {
+projectsRouter.get("/me", JWTAuthMW, async (req, res, next) => {
   try {
     const search = req.query.s;
-    const projects = await ProjectModel.find({
-      $in: { developers: req.user._id },
-    }).populate({ path: "developers", select: "" });
+    const projects = await ProjectModel.find({developers: req.user._id },
+        {new:true}).populate({ path: "developers", select: "" });
     if (req.query.s) {
       const projects = await ProjectModel.find({
         // $or: [{ title: `${search}` }],
@@ -204,30 +202,7 @@ projectsRouter.delete(
 
 /***************************  project routes ************************/
 
-/*****************************  get all my projects *************************/
-projectsRouter.get("/me", JWTAuthMW, async (req, res, next) => {
-  try {
-    const projects = await ProjectModel.find({
-      creator: req.user._id,
-    }).populate({ path: "creator", select: "name surname email avatar " });
 
-    projects.forEach((project, i) => {
-      const isLiked = project.Likes.find(
-        (like) => like.toString() === req.user._id
-      );
-      if (isLiked) {
-        projects[i].isLiked = true;
-      } else {
-        projects[i].isLiked = false;
-      }
-    });
-    res.send({ projects });
-  } catch (error) {
-    console.log(error);
-
-    next(createError(error));
-  }
-});
 /***************************  register new project ***********************/
 projectsRouter.post("/", JWTAuthMW, async (req, res, next) => {
   try {
