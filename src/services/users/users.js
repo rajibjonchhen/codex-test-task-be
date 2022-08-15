@@ -3,13 +3,14 @@ import createError from "http-errors";
 import UserModel from "./user-schema.js";
 import {sendConfirmationEmail} from "../authentication/nodemailer.js";
 import { authenticateUser } from "../authentication/tools.js";
+import { JWTAuthMW } from "../authentication/JWTAuthMW.js";
+import { managerMW } from "../authentication/managerMW.js";
 
 const usersRouter = express.Router()
 
 //**************** post user *********************/
 usersRouter.post("/register", async(req, res, next) => {
     try {
-        console.log("new user", req.body);
         const newUser = new UserModel(req.body);
         const user = await newUser.save();
         // await sendConfirmationEmail({toUser: newUser.data, hash:newUser.data._id})
@@ -37,7 +38,6 @@ usersRouter.post("/signin", async(req, res, next) => {
     try {
     const { email, password } = req.body;
     const reqUser = await UserModel.checkCredentials(email, password);
-    console.log("signin", req.body);
     if (reqUser) {
       const user = await UserModel.findById(reqUser._id);
       const token = await authenticateUser(user);
@@ -58,16 +58,41 @@ usersRouter.get("/", async(req, res, next) => {
         const users = await UserModel.find()
         res.send({users})
     } catch (error) {
-        
+        console.log(error)
+        next(createError(error));
+    }
+})
+//**************** edit a users ******************/
+usersRouter.put("/:userId",JWTAuthMW,  async(req, res, next) => {
+    try {
+        const userId = req.params.userId;
+        const users = await UserModel.findByIdAndUpdate(userId, req.body, {new:true})
+        res.send({users})
+    } catch (error) {
+        console.log(error)
+        next(createError(error));
     }
 })
 
-//**************** get user by id *******************/
-usersRouter.get("/:userId", async(req, res, next) => {
+//**************** get my info ******************/
+usersRouter.get("/me", JWTAuthMW, async(req, res, next) => {
     try {
-        res.send({message:"get user by id"})
+        const user = await UserModel.findById(req.user._id)
+        res.send({user})
     } catch (error) {
-        
+        console.log(error)
+        next(createError(error));
+    }
+})
+
+//**************** get developers *******************/
+usersRouter.get("/developers", async(req, res, next) => {
+    try {
+        const developers = await UserModel.find({role:"developer"})
+        res.send({developers})
+    } catch (error) {
+        console.log(error)
+        next(createError(error));
     }
 })
 

@@ -6,133 +6,180 @@ import ProjectModel from "./project-schema.js";
 import TaskModel from "../tasks/task-schema.js";
 import { managerMW } from "../authentication/managerMW.js";
 
-
 const projectsRouter = express.Router();
 
 /***************************  register new project ***********************/
 projectsRouter.post("/", JWTAuthMW, async (req, res, next) => {
-    try {
-        const newproject = new ProjectModel({
-        ...req.body,
-        developer: [req.user._id]
-        });
-        const project = await newproject.save();
-        if (project) {
-        res.send({ project });
-        } else {
-        console.log("bad request missing field could not create project");
-        next(
-            createError(401, {
-            message: "bad request missing field could not create project",
-            })
-        );
-        }
-    } catch (error) {
-        console.log(error);
-        next(createError(error));
-    }
+  try {
+    const newproject = new ProjectModel({
+      ...req.body,
+      developer: [req.user._id],
     });
-
+    const project = await newproject.save();
+    if (project) {
+      res.send({ project });
+    } else {
+      console.log("bad request missing field could not create project");
+      next(
+        createError(401, {
+          message: "bad request missing field could not create project",
+        })
+      );
+    }
+  } catch (error) {
+    console.log(error);
+    next(createError(error));
+  }
+});
 
 /*****************************  get all projects *************************/
 projectsRouter.get("/", JWTAuthMW, async (req, res, next) => {
-    try {
-        const search = req.query.s;
-        const projects = await ProjectModel.find();
+  try {
+    const search = req.query.s;
+    const projects = await ProjectModel.find();
 
-        if (req.query.s) {
-        const projects = await ProjectModel.find({
-            // $or: [{ title: `${search}` }],
-            $or: [{"title": `/^${search}/i`},{"name": `/^${search}/i`}, {"description": `/^${search}/i`}, {"summary": `/^${search}/i`}]
-        });
-
-        res.send({ projects });
-        } else {
-        res.send({ projects });
-        }
-    } catch (error) {
-        console.log(error);
-        next(createError(error));
+    if (req.query.s) {
+      const projects = await ProjectModel.find({
+        $or: [
+          { title: `/^${search}/i` },
+          { name: `/^${search}/i` },
+          { description: `/^${search}/i` },
+          { summary: `/^${search}/i` },
+        ],
+      }).populate({ path: "developers", select: "" });
+      res.send({ projects });
+    } else {
+      res.send({ projects });
     }
-    });
+  } catch (error) {
+    console.log(error);
+    next(createError(error));
+  }
+});
 
+/*****************************  get my projects *************************/
+projectsRouter.get("/my", JWTAuthMW, async (req, res, next) => {
+  try {
+    const search = req.query.s;
+    const projects = await ProjectModel.find({
+      $in: { developers: req.user._id },
+    }).populate({ path: "developers", select: "" });
+    if (req.query.s) {
+      const projects = await ProjectModel.find({
+        // $or: [{ title: `${search}` }],
+        $or: [
+          { title: `/^${search}/i` },
+          { description: `/^${search}/i` },
+        ],
+      }).populate({ path: "developers", select: "" });
+      res.send({ projects });
+    } else {
+      res.send({ projects });
+    }
+  } catch (error) {
+    console.log(error);
+    next(createError(error));
+  }
+});
 
 /***************************  edit project by id route ************************/
-projectsRouter.put("/:projectId",
-JWTAuthMW,
-async (req, res, next) => {
+projectsRouter.put("/:projectId", JWTAuthMW, async (req, res, next) => {
+  try {
+    const project = await ProjectModel.findById(req.params.projectId);
+    const updatedProject = await ProjectModel.findByIdAndUpdate(
+      req.params.projectId,
+      req.body,
+      { new: true }
+    );
+    res.send({ project: updatedProject });
+  } catch (error) {
+    console.log(error);
+    next(createError(error));
+  }
+});
+
+/***************************  assign developer to a project ************************/
+projectsRouter.put(
+  "/:projectId/developers",
+  JWTAuthMW,
+  async (req, res, next) => {
     try {
-        
+      const project = await ProjectModel.findById(
+        req.params.projectId
+      )
+      if (project.developers.includes(req.body.developer)) {
+        const project = await ProjectModel.findById(
+            req.params.projectId
+          ).populate({ path: "developers", select: "" });
+        res.send({ project, message: "developer already assigned to project" });
+      } else {
         const updatedProject = await ProjectModel.findByIdAndUpdate(
-            req.params.projectId,
-            req.body,
-            { new: true }
-        );
+          req.params.projectId,
+          { $push:{developers: req.body.developer} },
+          { new: true }
+        ).populate({ path: "developers", select: "" });
         res.send({ project: updatedProject });
-        
+      }
     } catch (error) {
-        console.log(error);
-        next(createError(error));
+      console.log(error);
+      next(createError(error));
     }
-}
+  }
 );
 
 /***************************  get project by id  ************************/
 projectsRouter.get("/:projectId", JWTAuthMW, async (req, res, next) => {
-    try {
-      const project = await ProjectModel.findById(req.params.projectId).populate({
+  try {
+    const project = await ProjectModel.findById(req.params.projectId)
+      .populate({
         path: "developers",
         select: "name surname email",
+      })
+      .populate({
+        path: "tasks",
+        select: "",
       });
-        res.send({ project });
-    } catch (error) {
-      console.log(error);
-      next(createError(error));
-    }
-  });
-  
+    res.send({ project });
+  } catch (error) {
+    console.log(error);
+    next(createError(error));
+  }
+});
 
-  /***************************  get tasks of a project ************************/
+/***************************  get tasks of a project ************************/
 projectsRouter.get("/:projectId/tasks", async (req, res, next) => {
-    try {
-      const project = await ProjectModel.findById(req.params.projectId).populate(
-        {path: "tasks", select: "task description status"}
-      )
-        res.send({ tasks: project.tasks });
-    } catch (error) {
-      console.log(error);
-      next(createError(error));
-    }
-  });
-
-
+  try {
+    const projects = await ProjectModel.findById(req.params.projectId).populate(
+      { path: "tasks", select: " " }
+    );
+    const tasks = projects.tasks;
+    res.send({ tasks });
+  } catch (error) {
+    console.log(error);
+    next(createError(error));
+  }
+});
 
 /****************************  add tasks to project *************************/
 projectsRouter.post("/:projectId/tasks", JWTAuthMW, async (req, res, next) => {
-    try {
-      const projectId = req.params.projectId
-      const newTask = new TaskModel({
-        ...req.body,
-        project: projectId,
-      })
-      const { _id } = await newTask.save()
-      const updatedProject = await ProjectModel.findByIdAndUpdate(
-        projectId,
-        { $push: { tasks: _id } },
-        { new: true }
-      ).populate({ path: "tasks", select: "" })
-      res.status(201).send({ updatedProject: updatedProject, newTaskId: _id })
-    } catch (error) {
-      console.log(error)
-      next(createError(error))
-    }
-  })
-  
-
-
-
-
-
+  try {
+    const projectId = req.params.projectId;
+    const newTask = new TaskModel({
+      ...req.body,
+      project: projectId,
+    });
+    const { _id } = await newTask.save();
+    const project = await ProjectModel.findByIdAndUpdate(
+      projectId,
+      { $push: { tasks: _id } },
+      { new: true }
+    ).populate({ path: "tasks", select: "" });
+    res.status(201).send({ project, newTaskId: _id });
+  } catch (error) {
+    console.log(error);
+    next(createError(error));
+  }
+});
 
 /***************************  delete project byid route ************************/
 projectsRouter.delete(
@@ -206,7 +253,6 @@ projectsRouter.post("/", JWTAuthMW, async (req, res, next) => {
   }
 });
 
-
 /*****************************  get all projects *************************/
 projectsRouter.get("/", async (req, res, next) => {
   try {
@@ -226,7 +272,5 @@ projectsRouter.get("/", async (req, res, next) => {
     next(createError(error));
   }
 });
-
-
 
 export default projectsRouter;
