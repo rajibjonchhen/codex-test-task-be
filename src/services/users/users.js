@@ -19,7 +19,7 @@ usersRouter.post("/register", async(req, res, next) => {
             const user = await newUser.save()
             if(user){
                 sendConfirmationEmail({toUser:newUser, hash:newUser._id})
-                res.send({message:"You have been registered successfully. Please check your email to confirm your account"})
+                res.send({message:"You have been registered successfully. Please check your email to confirm your account", user})
             }else{
                 next(createError(400, "bad request missing field could not create user"))
             }

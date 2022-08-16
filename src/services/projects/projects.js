@@ -41,9 +41,7 @@ projectsRouter.get("/", JWTAuthMW, async (req, res, next) => {
       const projects = await ProjectModel.find({
         $or: [
           { title: `/^${search}/i` },
-          { name: `/^${search}/i` },
           { description: `/^${search}/i` },
-          { summary: `/^${search}/i` },
         ],
       }).populate({ path: "developers", select: "" });
       res.send({ projects });
@@ -60,8 +58,8 @@ projectsRouter.get("/", JWTAuthMW, async (req, res, next) => {
 projectsRouter.get("/me", JWTAuthMW, async (req, res, next) => {
   try {
     const search = req.query.s;
-    const projects = await ProjectModel.find({developers: req.user._id },
-        {new:true}).populate({ path: "developers", select: "" });
+    const projects = await ProjectModel.find({developers: req.user._id }).populate({ path: "developers", select: "" });
+
     if (req.query.s) {
       const projects = await ProjectModel.find({
         // $or: [{ title: `${search}` }],

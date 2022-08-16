@@ -16,7 +16,7 @@ export const sendConfirmationEmail = function ({toUser, hash}) {
             subject: 'Codex Software - Confirm your account',
             html: `<p>Hello ${toUser.name},</p>
                    <p>Please confirm your account by clicking the link below:</p>     
-                   <a href="${process.env.SERVER_URL}/confirm/${hash}"><button style={{backgroundColor:"gold"}}>Confirm</button></a>
+                   <a href="${process.env.DOMAIN}/confirm/${hash}"><button style={{backgroundColor:"gold"}}>Confirm</button></a>
                    <p>Thank you!</p>
                    <p>Codex Software</p>  
                    `
