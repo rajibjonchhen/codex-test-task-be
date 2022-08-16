@@ -52,10 +52,10 @@ commentsRouter.put("/:commentId", async (req, res, next) => {
 commentsRouter.delete("/:commentId", async (req, res, next) => {
   try {
     const commentId = req.params.commentId;
-    await CommentModel.findByIdAndDelete(commentId);
     const reqComment = await CommentModel.findById(commentId);
     if (reqComment) {
-      const updatedTask = await TaskModel.findByIdAndUpdate(
+        await CommentModel.findByIdAndDelete(commentId);
+        const updatedTask = await TaskModel.findByIdAndUpdate(
         reqComment.task,
         { $pull: { comments: commentId} },
         { new: true }

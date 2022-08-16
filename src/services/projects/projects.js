@@ -177,6 +177,26 @@ projectsRouter.post("/:projectId/tasks", JWTAuthMW, async (req, res, next) => {
   }
 });
 
+
+/****************************  get my tasks  *************************/
+projectsRouter.get("/:projectId/tasks/my", JWTAuthMW, async (req, res, next) => {
+    try {
+        const projectId = req.params.projectId;
+        const project = await ProjectModel.findById(projectId).populate({
+        path: "tasks",
+        select: "",
+        });
+        const tasks = project.tasks.filter((task) => {
+        return task.developers.includes(req.user._id);
+        })
+        res.send({ tasks });
+    } catch (error) {
+        console.log(error);
+        next(createError(error));
+    }
+}
+);
+
 /***************************  delete project byid route ************************/
 projectsRouter.delete(
   "/:projectId",
