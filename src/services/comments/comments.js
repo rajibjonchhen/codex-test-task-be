@@ -8,7 +8,7 @@ const commentsRouter = express.Router();
 commentsRouter.get("/:commentId", async (req, res, next) => {
   try {
     const commentId = req.params.commentId;
-    const comment = await CommentModel.findById(commentId);
+    const comment = await (await CommentModel.findById(commentId)).populate({path:"commentedBy", select:""});
     if (comment) {
       res.send({ comment });
     } else {
